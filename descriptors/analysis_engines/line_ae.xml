@@ -144,7 +144,7 @@
     <flowConstraints>
       <fixedFlow>
         <node>CollectionReader</node>
-<!--        <node>ImagePreprocessor</node>-->
+        <node>ImagePreprocessor</node>
         <node>LineAnnotator</node>
         <!--ImageSegmentationAnnotator -->
       

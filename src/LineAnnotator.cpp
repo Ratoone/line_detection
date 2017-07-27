@@ -29,11 +29,11 @@ class LineAnnotator : public DrawingAnnotator
 {
 private:
   float test_param;
-  pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud;
+  pcl::PointCloud<pcl::PointXYZRGBA>::Ptr output_cloud;
   double pointSize;
 
 public:
-  LineAnnotator(): DrawingAnnotator(__func__), output_cloud(new pcl::PointCloud<pcl::PointXYZ>), pointSize(1.0)
+  LineAnnotator(): DrawingAnnotator(__func__), output_cloud(new pcl::PointCloud<pcl::PointXYZRGBA>), pointSize(1.0)
   {
   }
 
@@ -72,15 +72,15 @@ public:
     waitKey(10);
   }
 
-  void line_det_3d(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
+  void line_det_3d(pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud)
   {
-    pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud;
-    pcl::VoxelGrid<pcl::PointXYZ> filter;
+    pcl::PointCloud<pcl::PointXYZRGBA>::Ptr filtered_cloud;
+    pcl::VoxelGrid<pcl::PointXYZRGBA> filter;
     filter.setInputCloud(cloud);
     filter.setLeafSize(0.01f,0.01f,0.01f);
     filter.filter(*filtered_cloud);
 
-    pcl::SACSegmentation<pcl::PointXYZ> segmentation;
+    pcl::SACSegmentation<pcl::PointXYZRGBA> segmentation;
     pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
     pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
 
@@ -90,14 +90,14 @@ public:
 
     segmentation.setInputCloud(filtered_cloud);
     segmentation.segment(*inliers,*coefficients);
-    pcl::copyPointCloud<pcl::PointXYZ>(*filtered_cloud,inliers->indices,*output_cloud);
+    pcl::copyPointCloud<pcl::PointXYZRGBA>(*filtered_cloud,inliers->indices,*output_cloud);
   }
 
   TyErrorId processWithLock(CAS& tcas, ResultSpecification const& res_spec)
   {
     rs::SceneCas cas(tcas);
     Mat image;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
+    pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud;
 
     cas.get(VIEW_COLOR_IMAGE,image);
     cas.get(VIEW_CLOUD, cloud);
