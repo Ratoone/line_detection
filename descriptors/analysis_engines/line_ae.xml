@@ -143,7 +143,10 @@
     </configurationParameterSettings>
     <flowConstraints>
       <fixedFlow>
-       <node>LineAnnotator</node>
+        <node>CollectionReader</node>
+<!--        <node>ImagePreprocessor</node>-->
+        <node>LineAnnotator</node>
+        <!--ImageSegmentationAnnotator -->
       
       </fixedFlow>
     </flowConstraints>

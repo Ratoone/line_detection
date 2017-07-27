@@ -1,12 +1,18 @@
 #include <uima/api.hpp>
 
 #include <pcl/point_types.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/sample_consensus/method_types.h>
+#include <pcl/sample_consensus/model_types.h>
+#include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/io/pcd_io.h>
 #include <rs/types/all_types.h>
-//RS
+// RS
 #include <rs/scene_cas.h>
 #include <rs/utils/time.h>
+#include <rs/DrawingAnnotator.h>
 
-//ros
+// ros
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
 #include <std_msgs/Float32.h>
@@ -14,21 +20,24 @@
 //
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
-#include <cv_bridge/cv_bridge.h>
 
 using namespace uima;
 using namespace cv;
+using namespace std;
 
-
-class LineAnnotator : public Annotator
+class LineAnnotator : public DrawingAnnotator
 {
 private:
   float test_param;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud;
+  double pointSize;
 
 public:
-  static ros::Publisher test;
+  LineAnnotator(): DrawingAnnotator(__func__), output_cloud(new pcl::PointCloud<pcl::PointXYZ>), pointSize(1.0)
+  {
+  }
 
-  TyErrorId initialize(AnnotatorContext &ctx)
+  TyErrorId initialize(AnnotatorContext& ctx)
   {
     outInfo("initialize");
     ctx.extractValue("test_param", test_param);
@@ -41,53 +50,81 @@ public:
     return UIMA_ERR_NONE;
   }
 
-  static void line_det_2d(const sensor_msgs::Image &msg)
+  void line_det_2d(Mat image)
   {
-    //std_msgs::UInt8 x;
-    //x.data = 5;
-    //test.publish(x);
-    //gray image
-    //outInfo("callback 2D");
-    cv_bridge::CvImagePtr cvImage = cv_bridge::toCvCopy(msg);
-    Mat image = cvImage->image;
-    Mat image_gray;
-    cvtColor(image,image_gray,CV_BGR2GRAY);
-    imshow("Shit",image_gray);
-    GaussianBlur(image_gray, image_gray, Size(3, 3),0,0);
-    //imshow("Bluuurrr",image_gray);
-    Canny(image_gray,image_gray,30,90,3);
-    imshow("Cannyyy",image_gray);
-    //
+    Mat image_gray, edges, final_line;
+    cvtColor(image, image_gray, CV_BGR2GRAY);
+    GaussianBlur(image_gray, image_gray, Size(3, 3), 0, 0);
+    Canny(image_gray, edges, 30, 90, 3);
+
+    cvtColor(edges, final_line, CV_GRAY2BGR);
+
+    vector<Vec4i> lines;
+    HoughLinesP(edges, lines, 1, CV_PI / 180, 50, 100, 5);
+    for (size_t i = 0; i < lines.size(); i++)
+    {
+      Vec4i l = lines[i];
+      line(final_line, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0, 255, 0),
+           2, CV_AA);
+    }
+    imshow("lines", final_line);
+
     waitKey(10);
   }
 
-  static void line_det_3d(pcl::PointCloud<pcl::PointXYZ>::Ptr msg)
+  void line_det_3d(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
   {
+    pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud;
+    pcl::VoxelGrid<pcl::PointXYZ> filter;
+    filter.setInputCloud(cloud);
+    filter.setLeafSize(0.01f,0.01f,0.01f);
+    filter.filter(*filtered_cloud);
 
+    pcl::SACSegmentation<pcl::PointXYZ> segmentation;
+    pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+    pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+
+    segmentation.setModelType(pcl::SACMODEL_LINE);
+    segmentation.setMethodType(pcl::SAC_RANSAC);
+    segmentation.setDistanceThreshold(0.01);
+
+    segmentation.setInputCloud(filtered_cloud);
+    segmentation.segment(*inliers,*coefficients);
+    pcl::copyPointCloud<pcl::PointXYZ>(*filtered_cloud,inliers->indices,*output_cloud);
   }
 
-  TyErrorId process(CAS &tcas, ResultSpecification const &res_spec)
+  TyErrorId processWithLock(CAS& tcas, ResultSpecification const& res_spec)
   {
-    int argc = 0;
-    char **argv;
-    outInfo("process start");
-    ros::init(argc,argv,"line_detection");
-    ros::NodeHandle handler;
-    ros::Subscriber sub2d = handler.subscribe("/camera/rgb/image_raw",100,line_det_2d);
-    //test = handler.advertise<std_msgs::Float32>("/random_topic_name",100);
-    //ros::Subscriber sub3d = handler.subscribe("/camera/depth/points",100,line_det_3d);
-    ros::spin();
-    //pub = handler.advertise<std_msgs::Float32>("avg",100);
-    /*rs::StopWatch clock;
     rs::SceneCas cas(tcas);
-    pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud_ptr(new pcl::PointCloud<pcl::PointXYZRGBA>);
-    outInfo("Test param =  " << test_param);
-    cas.get(VIEW_CLOUD,*cloud_ptr);
+    Mat image;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
 
-    outInfo("Cloud size: " << cloud_ptr->points.size());
-    outInfo("took: " << clock.getTime() << " ms.");*/
+    cas.get(VIEW_COLOR_IMAGE,image);
+    cas.get(VIEW_CLOUD, cloud);
+    line_det_2d(image);
+    line_det_3d(cloud);
+
+    outInfo("process start");
     return UIMA_ERR_NONE;
   }
+
+  void fillVisualizerWithLock(pcl::visualization::PCLVisualizer &visualizer, const bool firstRun)
+  {
+    const std::string &cloudname = "Line Cloud Stuff";
+    //double pointSize=1.0;
+
+    if(firstRun)
+    {
+      visualizer.addPointCloud(output_cloud, cloudname);
+      visualizer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, pointSize, cloudname);
+    }
+    else
+    {
+      visualizer.updatePointCloud(output_cloud, cloudname);
+      visualizer.getPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, pointSize, cloudname);
+    }
+  }
+  void drawImageWithLock(cv::Mat &disp){}
 };
 
 // This macro exports an entry point that is used to create the annotator.
