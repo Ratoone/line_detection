@@ -29,12 +29,17 @@ class LineAnnotator : public DrawingAnnotator
 {
 private:
   float test_param;
-  pcl::PointCloud<pcl::PointXYZRGBA>::Ptr output_cloud;
+  //pcl::PointIndices::Ptr inliers;
   double pointSize;
+  pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud;
+  pcl::PointCloud<pcl::PointXYZRGBA>::Ptr filtered_cloud;
+  Mat final_line;
 
 public:
-  LineAnnotator(): DrawingAnnotator(__func__), output_cloud(new pcl::PointCloud<pcl::PointXYZRGBA>), pointSize(1.0)
+  LineAnnotator(): DrawingAnnotator(__func__), pointSize(1.0)//inliers (new pcl::PointIndices)
   {
+    cloud = pcl::PointCloud<pcl::PointXYZRGBA>::Ptr (new pcl::PointCloud<pcl::PointXYZRGBA>);
+    filtered_cloud = pcl::PointCloud<pcl::PointXYZRGBA>::Ptr(new pcl::PointCloud<pcl::PointXYZRGBA>);
   }
 
   TyErrorId initialize(AnnotatorContext& ctx)
@@ -52,7 +57,7 @@ public:
 
   void line_det_2d(Mat image)
   {
-    Mat image_gray, edges, final_line;
+    Mat image_gray, edges;
     cvtColor(image, image_gray, CV_BGR2GRAY);
     GaussianBlur(image_gray, image_gray, Size(3, 3), 0, 0);
     Canny(image_gray, edges, 30, 90, 3);
@@ -67,18 +72,19 @@ public:
       line(final_line, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0, 255, 0),
            2, CV_AA);
     }
-    imshow("lines", final_line);
 
     waitKey(10);
   }
 
   void line_det_3d(pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud)
   {
-    pcl::PointCloud<pcl::PointXYZRGBA>::Ptr filtered_cloud;
     pcl::VoxelGrid<pcl::PointXYZRGBA> filter;
     filter.setInputCloud(cloud);
-    filter.setLeafSize(0.01f,0.01f,0.01f);
+    filter.setLeafSize(0.005f,0.005f,0.005f);
     filter.filter(*filtered_cloud);
+
+    outInfo("input cloud"<<filter.getInputCloud()->points.size());
+    outInfo("filtered"<<filtered_cloud->points.size());
 
     pcl::SACSegmentation<pcl::PointXYZRGBA> segmentation;
     pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
@@ -86,45 +92,50 @@ public:
 
     segmentation.setModelType(pcl::SACMODEL_LINE);
     segmentation.setMethodType(pcl::SAC_RANSAC);
-    segmentation.setDistanceThreshold(0.01);
+    segmentation.setDistanceThreshold(0.02f);
 
-    segmentation.setInputCloud(filtered_cloud);
+    segmentation.setInputCloud(cloud);
     segmentation.segment(*inliers,*coefficients);
-    pcl::copyPointCloud<pcl::PointXYZRGBA>(*filtered_cloud,inliers->indices,*output_cloud);
+   // pcl::copyPointCloud<pcl::PointXYZRGBA>(*cloud,inliers->indices,*filtered_cloud);
   }
 
   TyErrorId processWithLock(CAS& tcas, ResultSpecification const& res_spec)
   {
     rs::SceneCas cas(tcas);
     Mat image;
-    pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud;
-
-    cas.get(VIEW_COLOR_IMAGE,image);
-    cas.get(VIEW_CLOUD, cloud);
-    line_det_2d(image);
-    line_det_3d(cloud);
 
     outInfo("process start");
+
+    cas.get(VIEW_COLOR_IMAGE,image);
+    cas.get(VIEW_CLOUD, *cloud);
+
+    line_det_2d(image);
+    outInfo("finished 2D");
+    line_det_3d(cloud);
+
+
     return UIMA_ERR_NONE;
   }
 
   void fillVisualizerWithLock(pcl::visualization::PCLVisualizer &visualizer, const bool firstRun)
   {
     const std::string &cloudname = "Line Cloud Stuff";
-    //double pointSize=1.0;
 
     if(firstRun)
     {
-      visualizer.addPointCloud(output_cloud, cloudname);
+      visualizer.addPointCloud(cloud, cloudname);
       visualizer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, pointSize, cloudname);
     }
     else
     {
-      visualizer.updatePointCloud(output_cloud, cloudname);
+      visualizer.updatePointCloud(cloud, cloudname);
       visualizer.getPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, pointSize, cloudname);
     }
   }
-  void drawImageWithLock(cv::Mat &disp){}
+  void drawImageWithLock(cv::Mat &disp)
+  {
+    disp = final_line;
+  }
 };
 
 // This macro exports an entry point that is used to create the annotator.

@@ -3,7 +3,8 @@ project(line_detection)
 find_package(catkin REQUIRED 
 	robosherlock
 	sensor_msgs
-	std_msgs)
+	std_msgs
+)
 #generate_messages(
 #	DEPENDENCIES
 #	sensor_msgs)

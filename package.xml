@@ -41,6 +41,8 @@
   <!--   <test_depend>gtest</test_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>robosherlock</build_depend>
+<build_depend>pcl_ros</build_depend>
+<run_depend>pcl_ros</run_depend>
   <run_depend>robosherlock</run_depend>
 
 
