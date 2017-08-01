@@ -72,19 +72,13 @@ public:
       line(final_line, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0, 255, 0),
            2, CV_AA);
     }
-
+    imshow("img",final_line);
     waitKey(10);
   }
 
   void line_det_3d(pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud)
   {
-    pcl::VoxelGrid<pcl::PointXYZRGBA> filter;
-    filter.setInputCloud(cloud);
-    filter.setLeafSize(0.005f,0.005f,0.005f);
-    filter.filter(*filtered_cloud);
-
-    outInfo("input cloud"<<filter.getInputCloud()->points.size());
-    outInfo("filtered"<<filtered_cloud->points.size());
+    outInfo("filtered"<<cloud->points.size());
 
     pcl::SACSegmentation<pcl::PointXYZRGBA> segmentation;
     pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
@@ -107,11 +101,11 @@ public:
     outInfo("process start");
 
     cas.get(VIEW_COLOR_IMAGE,image);
-    cas.get(VIEW_CLOUD, *cloud);
+    //cas.get(VIEW_CLOUD_DOWNSAMPLED, *cloud);
 
     line_det_2d(image);
     outInfo("finished 2D");
-    line_det_3d(cloud);
+    //line_det_3d(cloud);
 
 
     return UIMA_ERR_NONE;

@@ -145,6 +145,7 @@
       <fixedFlow>
         <node>CollectionReader</node>
         <node>ImagePreprocessor</node>
+        <node>PointCloudDownsampler</node>
         <node>LineAnnotator</node>
         <!--ImageSegmentationAnnotator -->
       
