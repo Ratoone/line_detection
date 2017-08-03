@@ -70,6 +70,9 @@
     <delegateAnalysisEngine key="ObjectIdentityResolution">
       <import location="../../../robosherlock/descriptors/annotators/tracker/ObjectIdentityResolution.xml"/>
     </delegateAnalysisEngine>
+    <delegateAnalysisEngine key="OnlinePointCloudFilter">
+      <import location="../annotators/OnlinePointCloudFilter.xml"/>
+    </delegateAnalysisEngine>
     <delegateAnalysisEngine key="PCLDescriptorExtractor">
       <import location="../../../robosherlock/descriptors/annotators/annotation/PCLDescriptorExtractor.xml"/>
     </delegateAnalysisEngine>
@@ -133,7 +136,27 @@
           <parameter>CollectionReader/camera_config_files</parameter>
         </overrides>
       </configurationParameter>
+
+      <configurationParameter>
+        <name>minZ</name>
+        <type>Float</type>
+        <multiValued>false</multiValued>
+        <mandatory>true</mandatory>
+        <overrides>
+          <parameter>OnlinePointCloudFilter/minZ</parameter>
+        </overrides>
+      </configurationParameter>
+      <configurationParameter>
+        <name>maxZ</name>
+        <type>Float</type>
+        <multiValued>false</multiValued>
+        <mandatory>true</mandatory>
+        <overrides>
+          <parameter>OnlinePointCloudFilter/minZ</parameter>
+        </overrides>
+      </configurationParameter>
     </configurationParameters>
+
     <configurationParameterSettings>
       <nameValuePair>
         <name>camera_config_files</name>
@@ -143,12 +166,24 @@
           </array>
         </value>
       </nameValuePair>
+      <nameValuePair>
+        <name>maxZ</name>
+        <value>
+          <float>2</float>
+        </value>
+      </nameValuePair>
+      <nameValuePair>
+        <name>minZ</name>
+        <value>
+          <float>0</float>
+        </value>
+      </nameValuePair>
     </configurationParameterSettings>
     <flowConstraints>
       <fixedFlow>
         <node>CollectionReader</node>
         <node>ImagePreprocessor</node>
-        <node>PointCloudFilter</node>
+        <node>OnlinePointCloudFilter</node>
         <node>NormalEstimator</node>
         <node>PlaneAnnotator</node>
         <node>LineAnnotator3D</node>

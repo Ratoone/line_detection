@@ -6,6 +6,7 @@
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/io/pcd_io.h>
+#include <pcl/common/impl/common.hpp>
 #include <rs/types/all_types.h>
 // RS
 #include <rs/scene_cas.h>
@@ -60,7 +61,9 @@ public:
 
   void line_det_3d(pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud)
   {
-    outInfo("filtered" << cloud->points.size());
+    pcl::PointXYZRGBA closest, furthest;
+    pcl::getMinMax3D(*cloud,closest,furthest);
+    this->getAnnotatorContext().assignValue("maxZ",0);
 
     pcl::SACSegmentation<pcl::PointXYZRGBA> segmentation;
     pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
