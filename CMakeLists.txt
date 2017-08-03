@@ -63,3 +63,6 @@ find_additional_files()
 
 rs_add_library(rs_lineAnnotator src/LineAnnotator.cpp)
 target_link_libraries(rs_lineAnnotator ${CATKIN_LIBRARIES})
+
+rs_add_library(rs_lineAnnotator3D src/LineAnnotator3D.cpp)
+target_link_libraries(rs_lineAnnotator3D ${CATKIN_LIBRARIES})

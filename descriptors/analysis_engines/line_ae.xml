@@ -55,6 +55,9 @@
     <delegateAnalysisEngine key="LineAnnotator">
       <import location="../annotators/LineAnnotator.xml"/>
     </delegateAnalysisEngine>
+    <delegateAnalysisEngine key="LineAnnotator3D">
+      <import location="../annotators/LineAnnotator3D.xml"/>
+    </delegateAnalysisEngine>
     <delegateAnalysisEngine key="LinemodAnnotator">
       <import location="../../../robosherlock/descriptors/annotators/recognition/LinemodAnnotator.xml"/>
     </delegateAnalysisEngine>
@@ -145,9 +148,12 @@
       <fixedFlow>
         <node>CollectionReader</node>
         <node>ImagePreprocessor</node>
-        <node>PointCloudDownsampler</node>
-        <node>LineAnnotator</node>
-        <!--ImageSegmentationAnnotator -->
+        <node>PointCloudFilter</node>
+        <node>NormalEstimator</node>
+        <node>PlaneAnnotator</node>
+        <node>LineAnnotator3D</node>
+<!--        <node>ImageSegmentationAnnotator</node>-->
+        <node>PointCloudClusterExtractor</node>
       
       </fixedFlow>
     </flowConstraints>

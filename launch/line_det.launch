@@ -16,7 +16,7 @@
   <!-- Default machine definition. -->
   <machine name="localhost" address="localhost" if="$(arg define_machine)"/>
 
-  <include file="$(find openni2_launch)/launch/openni2.launch" />
+ <!-- <include file="$(find openni2_launch)/launch/openni2.launch" />-->
 
   <!-- launch robosherlock with the pipeline defined in demo.xml-->
   <node name="RoboSherlock" pkg="robosherlock"  machine="$(arg machine)" type="run" output="screen">
