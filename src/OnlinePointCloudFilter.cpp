@@ -24,6 +24,7 @@
 #include <pcl/point_types.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/filters/passthrough.h>
+#include <pcl/common/impl/common.hpp>
 
 //RS
 #include <rs/scene_cas.h>
@@ -41,7 +42,7 @@ private:
   pcl::PointCloud<PointT>::Ptr cloud_filtered;
 
   double pointSize;
-  float minX, maxX, minY, maxY, minZ, maxZ;
+  float minX, maxX, minY, maxY, minZ, maxZ, depthThreshold;
   Type cloud_type;
 
 public:
@@ -63,6 +64,7 @@ public:
     ctx.extractValue("minZ", minZ);
     ctx.extractValue("maxZ", maxZ);
 
+    ctx.extractValue("depthThreshold",depthThreshold);
 
     return UIMA_ERR_NONE;
   }
@@ -82,11 +84,11 @@ public:
     pcl::PointCloud<PointT>::Ptr cloud_ptr(new pcl::PointCloud<PointT>);
     (new pcl::PointCloud<PointT>);
 
-    this->getAnnotatorContext().extractValue("minZ",minZ);
-    this->getAnnotatorContext().extractValue("maxZ",maxZ);
-
-
     cas.get(VIEW_CLOUD, *cloud_ptr);
+
+    PointT closest, furthest;
+    pcl::getMinMax3D(*cloud_ptr,closest,furthest);
+    maxZ = closest.z + depthThreshold;
 
     pcl::PassThrough<PointT> pass;
     pass.setInputCloud(cloud_ptr);

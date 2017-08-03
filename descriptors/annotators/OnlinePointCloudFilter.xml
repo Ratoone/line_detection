@@ -48,6 +48,12 @@
         <mandatory>true</mandatory>
       </configurationParameter>
 
+      <configurationParameter>
+        <name>depthThreshold</name>
+        <type>Float</type>
+        <multiValued>false</multiValued>
+        <mandatory>true</mandatory>
+      </configurationParameter>
 
     </configurationParameters>
     <configurationParameterSettings>
@@ -85,6 +91,12 @@
         <name>minY</name>
         <value>
           <float>-1.2</float>
+        </value>
+      </nameValuePair>
+      <nameValuePair>
+        <name>depthThreshold</name>
+        <value>
+          <float>0.25</float>
         </value>
       </nameValuePair>
     </configurationParameterSettings>

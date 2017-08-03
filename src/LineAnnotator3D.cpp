@@ -61,10 +61,6 @@ public:
 
   void line_det_3d(pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud)
   {
-    pcl::PointXYZRGBA closest, furthest;
-    pcl::getMinMax3D(*cloud,closest,furthest);
-    this->getAnnotatorContext().assignValue("maxZ",0);
-
     pcl::SACSegmentation<pcl::PointXYZRGBA> segmentation;
     pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
     pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
@@ -87,7 +83,6 @@ public:
 
     cas.get(VIEW_CLOUD, *cloud);
 
-    outInfo("finished 2D");
     line_det_3d(cloud);
 
     return UIMA_ERR_NONE;
