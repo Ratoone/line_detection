@@ -190,10 +190,6 @@
         <node>NormalEstimator</node>
         <!--<node>PlaneAnnotator</node>-->
         <node>PlaneExtraction</node>
-<!--        <node>RegionFilter</node>-->
-<!--        <node>LineAnnotator3D</node>-->
-<!--        <node>ImageSegmentationAnnotator</node>-->
-<!--        <node>PointCloudClusterExtractor</node>-->
         <node>PointCloudDownsampler</node>
 
       

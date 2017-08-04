@@ -69,3 +69,6 @@ target_link_libraries(rs_lineAnnotator3D ${CATKIN_LIBRARIES})
 
 rs_add_library(rs_onlinePointCloudFilter src/OnlinePointCloudFilter.cpp)
 target_link_libraries(rs_onlinePointCloudFilter ${CATKIN_LIBRARIES})
+
+rs_add_library(rs_planeExtraction src/PlaneExtraction.cpp)
+target_link_libraries(rs_planeExtraction ${CATKIN_LIBRARIES})
