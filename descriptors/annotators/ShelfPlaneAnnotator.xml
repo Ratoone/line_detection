@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<taeDescription xmlns="http://uima.apache.org/resourceSpecifier">
+  <frameworkImplementation>org.apache.uima.cpp</frameworkImplementation>
+  <primitive>true</primitive>
+  <annotatorImplementationName>rs_shelfPlaneAnnotator</annotatorImplementationName>
+  <analysisEngineMetaData>
+    <name>ShelfPlaneAnnotator</name>
+    <description>Annotator for the plane given by a board (chessboard, circleboard) or the main plane found by pcl</description>
+    <version>1.0</version>
+    <vendor/>
+    <configurationParameters>
+
+      <configurationParameter>
+        <name>save_to_file</name>
+        <description>save plane model coeffs. Saves model coeffs to robosherlock/config/plane_model.xml</description>
+        <type>Boolean</type>
+        <multiValued>false</multiValued>
+        <mandatory>false</mandatory>
+      </configurationParameter>
+
+      <configurationParameter>
+        <name>min_plane_inliers</name>
+        <description>minimum point in the plane(only for MPS)</description>
+        <type>Integer</type>
+        <multiValued>false</multiValued>
+        <mandatory>true</mandatory>
+      </configurationParameter>
+
+      <configurationParameter>
+        <name>max_iterations</name>
+        <description>max iterations for RANSAC (only for PCL)</description>
+        <type>Integer</type>
+        <multiValued>false</multiValued>
+        <mandatory>true</mandatory>
+      </configurationParameter>
+
+      <configurationParameter>
+        <name>distance_threshold</name>
+        <description>max distance between plane inliers</description>
+        <type>Float</type>
+        <multiValued>false</multiValued>
+        <mandatory>true</mandatory>
+      </configurationParameter>
+    </configurationParameters>
+    <configurationParameterSettings>
+
+      <nameValuePair>
+        <name>min_plane_inliers</name>
+        <value>
+          <integer>10000</integer>
+        </value>
+      </nameValuePair>
+
+      <nameValuePair>
+        <name>max_iterations</name>
+        <value>
+          <integer>50</integer>
+        </value>
+      </nameValuePair>
+
+      <nameValuePair>
+        <name>distance_threshold</name>
+        <value>
+          <float>0.02</float>
+        </value>
+      </nameValuePair>
+
+    </configurationParameterSettings>
+    <typeSystemDescription>
+      <imports>
+        <import location="../typesystem/all_types.xml"/>
+      </imports>
+    </typeSystemDescription>
+    <typePriorities/>
+    <fsIndexCollection/>
+    <capabilities>
+      <capability>
+        <inputs/>
+        <outputs/>
+          <!--<type allAnnotatorFeatures="true">rs.annotation.Plane</type>
+        </outputs>-->
+        <!--<inputSofas>
+          <sofaName>rs.pcl.RegionPointCloud</sofaName>
+        </inputSofas>-->
+        <languagesSupported>
+          <language>x-unspecified</language>
+        </languagesSupported>
+      </capability>
+    </capabilities>
+    <operationalProperties>
+      <modifiesCas>true</modifiesCas>
+      <multipleDeploymentAllowed>true</multipleDeploymentAllowed>
+      <outputsNewCASes>false</outputsNewCASes>
+    </operationalProperties>
+  </analysisEngineMetaData>
+  <resourceManagerConfiguration/>
+</taeDescription>

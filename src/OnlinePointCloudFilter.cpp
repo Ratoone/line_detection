@@ -25,6 +25,7 @@
 #include <pcl/features/normal_3d.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/common/impl/common.hpp>
+#include <pcl/filters/statistical_outlier_removal.h>
 
 //RS
 #include <rs/scene_cas.h>
@@ -84,7 +85,16 @@ public:
     pcl::PointCloud<PointT>::Ptr cloud_ptr(new pcl::PointCloud<PointT>);
     (new pcl::PointCloud<PointT>);
 
-    cas.get(VIEW_CLOUD, *cloud_ptr);
+    if (cas.has(VIEW_CLOUD_DOWNSAMPLED))
+    {
+      cas.get(VIEW_CLOUD_DOWNSAMPLED,*cloud_ptr);
+    }
+    else
+    {
+      cas.get(VIEW_CLOUD, *cloud_ptr);
+    }
+
+    p
 
     PointT closest, furthest;
     pcl::getMinMax3D(*cloud_ptr,closest,furthest);

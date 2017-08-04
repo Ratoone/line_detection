@@ -106,6 +106,9 @@
     <delegateAnalysisEngine key="SacModelAnnotator">
       <import location="../../../robosherlock/descriptors/annotators/annotation/SacModelAnnotator.xml"/>
     </delegateAnalysisEngine>
+    <delegateAnalysisEngine key="ShelfPlaneAnnotator">
+      <import location="../annotators/ShelfPlaneAnnotator.xml"/>
+    </delegateAnalysisEngine>
     <delegateAnalysisEngine key="StorageWriter">
       <import location="../../../robosherlock/descriptors/annotators/io/StorageWriter.xml"/>
     </delegateAnalysisEngine>
@@ -138,26 +141,33 @@
       </configurationParameter>
 
       <configurationParameter>
-        <name>minZ</name>
+        <name>distance_threshold</name>
+        <description>max distance between plane inliers</description>
         <type>Float</type>
         <multiValued>false</multiValued>
         <mandatory>true</mandatory>
         <overrides>
-          <parameter>OnlinePointCloudFilter/minZ</parameter>
+          <parameter>ShelfPlaneAnnotator/distance_threshold</parameter>
         </overrides>
       </configurationParameter>
       <configurationParameter>
-        <name>maxZ</name>
+        <name>depthThreshold</name>
         <type>Float</type>
         <multiValued>false</multiValued>
         <mandatory>true</mandatory>
         <overrides>
-          <parameter>OnlinePointCloudFilter/minZ</parameter>
+          <parameter>OnlinePointCloudFilter/depthThreshold</parameter>
         </overrides>
       </configurationParameter>
     </configurationParameters>
 
     <configurationParameterSettings>
+      <nameValuePair>
+        <name>distance_threshold</name>
+        <value>
+          <float>0.03</float>
+        </value>
+      </nameValuePair>
       <nameValuePair>
         <name>camera_config_files</name>
         <value>
@@ -167,15 +177,9 @@
         </value>
       </nameValuePair>
       <nameValuePair>
-        <name>maxZ</name>
+        <name>depthThreshold</name>
         <value>
-          <float>2</float>
-        </value>
-      </nameValuePair>
-      <nameValuePair>
-        <name>minZ</name>
-        <value>
-          <float>0</float>
+          <float>0.20</float>
         </value>
       </nameValuePair>
     </configurationParameterSettings>
@@ -183,12 +187,13 @@
       <fixedFlow>
         <node>CollectionReader</node>
         <node>ImagePreprocessor</node>
+        <node>PointCloudDownsampler</node>
         <node>OnlinePointCloudFilter</node>
+<!--        <node>ShelfPlaneAnnotator</node>-->
         <node>NormalEstimator</node>
-        <node>PlaneAnnotator</node>
         <node>LineAnnotator3D</node>
-<!--        <node>ImageSegmentationAnnotator</node>-->
-        <node>PointCloudClusterExtractor</node>
+        <!--<node>ImageSegmentationAnnotator</node>
+        <node>PointCloudClusterExtractor</node>-->
       
       </fixedFlow>
     </flowConstraints>
