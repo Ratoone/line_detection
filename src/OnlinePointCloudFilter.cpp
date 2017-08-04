@@ -94,8 +94,6 @@ public:
       cas.get(VIEW_CLOUD, *cloud_ptr);
     }
 
-    p
-
     PointT closest, furthest;
     pcl::getMinMax3D(*cloud_ptr,closest,furthest);
     maxZ = closest.z + depthThreshold;

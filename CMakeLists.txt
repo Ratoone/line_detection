@@ -72,3 +72,6 @@ target_link_libraries(rs_onlinePointCloudFilter ${CATKIN_LIBRARIES})
 
 rs_add_library(rs_shelfPlaneAnnotator src/ShelfPlaneAnnotator.cpp)
 target_link_libraries(rs_shelfPlaneAnnotator ${CATKIN_LIBRARIES})
+
+rs_add_library(rs_planeExtraction src/PlaneExtraction.cpp)
+target_link_libraries(rs_planeExtraction ${CATKIN_LIBRARIES})

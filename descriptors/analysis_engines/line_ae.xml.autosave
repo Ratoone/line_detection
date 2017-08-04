@@ -109,9 +109,6 @@
     <delegateAnalysisEngine key="SacModelAnnotator">
       <import location="../../../robosherlock/descriptors/annotators/annotation/SacModelAnnotator.xml"/>
     </delegateAnalysisEngine>
-    <delegateAnalysisEngine key="ShelfPlaneAnnotator">
-      <import location="../annotators/ShelfPlaneAnnotator.xml"/>
-    </delegateAnalysisEngine>
     <delegateAnalysisEngine key="StorageWriter">
       <import location="../../../robosherlock/descriptors/annotators/io/StorageWriter.xml"/>
     </delegateAnalysisEngine>
@@ -144,46 +141,44 @@
       </configurationParameter>
 
       <configurationParameter>
-        <name>distance_threshold</name>
-        <description>max distance between plane inliers</description>
+        <name>minZ</name>
         <type>Float</type>
         <multiValued>false</multiValued>
         <mandatory>true</mandatory>
         <overrides>
-          <parameter>ShelfPlaneAnnotator/distance_threshold</parameter>
+          <parameter>OnlinePointCloudFilter/minZ</parameter>
         </overrides>
       </configurationParameter>
       <configurationParameter>
-        <name>depthThreshold</name>
+        <name>maxZ</name>
         <type>Float</type>
         <multiValued>false</multiValued>
         <mandatory>true</mandatory>
         <overrides>
-          <parameter>OnlinePointCloudFilter/depthThreshold</parameter>
+          <parameter>OnlinePointCloudFilter/minZ</parameter>
         </overrides>
       </configurationParameter>
     </configurationParameters>
 
     <configurationParameterSettings>
       <nameValuePair>
-        <name>distance_threshold</name>
-        <value>
-          <float>0.03</float>
-        </value>
-      </nameValuePair>
-      <nameValuePair>
         <name>camera_config_files</name>
         <value>
           <array>
-<!--            <string>config_xtion.ini</string>-->
-            <string>config_pico.ini</string>
+            <string>config_xtion.ini</string>
           </array>
         </value>
       </nameValuePair>
       <nameValuePair>
-        <name>depthThreshold</name>
+        <name>maxZ</name>
         <value>
-          <float>0.20</float>
+          <float>2</float>
+        </value>
+      </nameValuePair>
+      <nameValuePair>
+        <name>minZ</name>
+        <value>
+          <float>0</float>
         </value>
       </nameValuePair>
     </configurationParameterSettings>
@@ -191,15 +186,12 @@
       <fixedFlow>
         <node>CollectionReader</node>
         <node>ImagePreprocessor</node>
-<!--        <node>NormalEstimator</node>-->
-<!--        <node>PointCloudDownsampler</node>-->
+        <!--node>OnlinePointCloudFilter</node-->
+        <node>NormalEstimator</node>
+        <!--<node>PlaneAnnotator</node>-->
         <node>PlaneExtraction</node>
+        <node>PointCloudDownsampler</node>
 
-<!--        <node>OnlinePointCloudFilter</node>-->
-<!--        <node>ShelfPlaneAnnotator</node>-->
-        <node>LineAnnotator3D</node>
-        <!--<node>ImageSegmentationAnnotator</node>
-        <node>PointCloudClusterExtractor</node>-->
       
       </fixedFlow>
     </flowConstraints>
