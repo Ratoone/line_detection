@@ -175,8 +175,8 @@
         <name>camera_config_files</name>
         <value>
           <array>
-<!--            <string>config_xtion.ini</string>-->
-            <string>config_pico.ini</string>
+            <string>config_xtion.ini</string>
+<!--            <string>config_pico.ini</string>-->
           </array>
         </value>
       </nameValuePair>
@@ -194,9 +194,7 @@
 <!--        <node>NormalEstimator</node>-->
 <!--        <node>PointCloudDownsampler</node>-->
         <node>PlaneExtraction</node>
-
-<!--        <node>OnlinePointCloudFilter</node>-->
-<!--        <node>ShelfPlaneAnnotator</node>-->
+        <node>LineAnnotator</node>
         <node>LineAnnotator3D</node>
         <!--<node>ImageSegmentationAnnotator</node>
         <node>PointCloudClusterExtractor</node>-->

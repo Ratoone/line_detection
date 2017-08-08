@@ -62,7 +62,7 @@ private:
 
   // Drawing
   bool foundPlane, saveToFile;
-  cv::Mat image;
+  cv::Mat image, outputImage;
   double pointSize;
 
   // params
@@ -128,6 +128,7 @@ public:
 
     outInfo("Estimating form Point Cloud");
     estimateFromPCL(tcas, scene);
+    createImage(tcas);
 
     if (!foundPlane)
     {
@@ -297,19 +298,31 @@ public:
     return true;
   }
 
+  void createImage(CAS& tcas)
+  {
+    outputImage = cv::Mat::zeros(output->height, output->width, CV_8UC3);
+    for (int y = 0; y < outputImage.rows; y++)
+    {
+      for (int x = 0; x < outputImage.cols; x++)
+      {
+        pcl::PointXYZRGBA point = output->at(x,y);
+        outputImage.at<cv::Vec3b>(y,x)[0] = point.b;
+        outputImage.at<cv::Vec3b>(y,x)[1] = point.g;
+        outputImage.at<cv::Vec3b>(y,x)[2] = 0;
+      }
+    }
+    rs::SceneCas cas(tcas);
+    cas.set(VIEW_COLOR_IMAGE, outputImage);
+  }
+
   void drawImageWithLock(cv::Mat& disp)
   {
-    if (!foundPlane)
-    {
-      disp = cv::Mat::zeros(image.rows, image.cols, CV_8UC3);
-      return;
-    }
+    disp = outputImage;
   }
 
   void fillVisualizerWithLock(pcl::visualization::PCLVisualizer& visualizer,
                               const bool firstRun)
   {
-
     if (firstRun)
     {
       visualizer.addPointCloud(output, cloudname);
