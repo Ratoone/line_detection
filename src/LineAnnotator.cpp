@@ -23,7 +23,7 @@
 #include <math.h>
 #include <geometry_msgs/Polygon.h>
 
-#define LENGTH_THRESHOLD 180.0f
+#define LENGTH_THRESHOLD 0.8f
 
 using namespace uima;
 using namespace cv;
@@ -32,11 +32,12 @@ using namespace std;
 class LineAnnotator : public DrawingAnnotator
 {
 private:
-  int croppedDistance = 30;
+  int croppedDistance = 20;
   Mat final_line;
   ros::NodeHandle nh;
   ros::Publisher pub;
   pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud;
+  geometry_msgs::Point32 point1,point2;
 
 public:
   LineAnnotator()
@@ -59,16 +60,7 @@ public:
     return UIMA_ERR_NONE;
   }
 
-//  static float slope(Vec4i line)
-//  {
-//    if (line[2]==line[0])
-//    {
-//        return std::numeric_limits<float>::max();
-//    }
-//    return (line[3] - line[1]) / (line[2] - line[0]);
-//  }
-
-  float lineDistance(Vec4i line)
+  static float lineDistance(Vec4i line)
   {
     Point p1 (line[0],line[1]);
     Point p2 (line[2],line[3]);
@@ -94,7 +86,6 @@ public:
     cvtColor(image_gray, image_gray, CV_BGR2GRAY);
     GaussianBlur(image_gray, image_gray, Size(5, 5), 0, 0);
 
-    int lowThreshold = 70;
     Canny(image_gray, edges, 120, 200, 3);
 
     //cv::morphologyEx(edges,edges,cv::MORPH_CLOSE,Mat());
@@ -107,22 +98,6 @@ public:
     drawContours(final_line,contours,-1,Scalar(255,0,255),3);
     cvtColor(final_line,image,CV_BGR2GRAY);
   }
-
-//  void detectEdges(Mat& image)
-//  {
-//    Mat image_gray;
-//    int croppedDistance = 20;
-//    Rect regionOfInterest (Point(croppedDistance,croppedDistance),Point(image.cols-croppedDistance,image.rows-croppedDistance));
-//    image_gray = image(regionOfInterest);
-//    cvtColor(image_gray, image_gray, CV_BGR2GRAY);
-//    Mat newImage = Mat::zeros(image_gray.rows,image_gray.cols,CV_8UC1);
-//    for(int i = 0; i<image.rows; i++)
-//    {
-//      for (int j = 0; j<image.cols;j++)
-//      {
-//      }
-//    }
-//  }
 
   void lineDetect2D(Mat image)
   {
@@ -138,9 +113,8 @@ public:
     for (size_t i = 0; i < lines.size(); i++)
     {
       // remove short lines
-      if (lineLength(lines[i]) < lineLength(lines[0])*0.75)
+      if (lineLength(lines[i]) < lineLength(lines[0])*LENGTH_THRESHOLD)
       {
-//        lines[i--] = lines[lines.size() - 1];
         lines.resize(i);
         break;
       }
@@ -148,30 +122,55 @@ public:
            Scalar(0, 255, 0), 2, CV_AA);
     }
 
-    if (lines.size()==0)
-    {
-      return;
-    }
-
-    line(final_line, Point(lines[0][0], lines[0][1]), Point(lines[0][2], lines[0][3]),
-         Scalar(0, 0, 255), 2, CV_AA);
-
+    std::sort(lines.begin(), lines.end(), [](Vec4i l1, Vec4i l2)
+                  {
+                    return lineDistance(l1) > lineDistance(l2);
+                  });
 
     geometry_msgs::Polygon poly;
-    geometry_msgs::Point32 point1,point2;
-    outInfo("starting line: "<<lines[0][0]<<" and "<<lines[0][1]);
-    point1.x = cloud->at(lines[0][0]+croppedDistance,lines[0][1]+croppedDistance).x;
-    point1.y = cloud->at(lines[0][0]+croppedDistance,lines[0][1]+croppedDistance).y;
-    point1.z = cloud->at(lines[0][0]+croppedDistance,lines[0][1]+croppedDistance).z;
 
-    point2.x = cloud->at(lines[0][2]+croppedDistance,lines[0][3]+croppedDistance).x;
-    point2.y = cloud->at(lines[0][2]+croppedDistance,lines[0][3]+croppedDistance).y;
-    point2.z = cloud->at(lines[0][2]+croppedDistance,lines[0][3]+croppedDistance).z;
+    for (size_t i =  0; i < lines.size();i++)
+    {
+      if (i != 0 && abs(lineDistance(lines[i])-lineDistance(lines[i-1])) < 30)
+      {
+        continue;
+      }
 
-    poly.points.push_back(point1);
-    poly.points.push_back(point2);
+      line(final_line, Point(lines[i][0], lines[i][1]), Point(lines[i][2], lines[i][3]),
+           Scalar(0, 0, 255), 2, CV_AA);
+
+
+      int dx=-2,dy=-3;
+      do
+      {
+        point1.x = cloud->at(lines[i][0]+croppedDistance+dx,lines[i][1]+croppedDistance+dy).x;
+        point1.y = cloud->at(lines[i][0]+croppedDistance+dx,lines[i][1]+croppedDistance+dy).y;
+        point1.z = cloud->at(lines[i][0]+croppedDistance+dx,lines[i][1]+croppedDistance+dy).z;
+        dy++;
+        if (dy == 3)
+        {
+          dy = -3;
+          dx++;
+        }
+      }while (std::isnan(point1.x));
+
+      dx=2,dy=3;
+      do
+      {
+        point2.x = cloud->at(lines[i][2]+croppedDistance+dx,lines[i][3]+croppedDistance+dy).x;
+        point2.y = cloud->at(lines[i][2]+croppedDistance+dx,lines[i][3]+croppedDistance+dy).y;
+        point2.z = cloud->at(lines[i][2]+croppedDistance+dx,lines[i][3]+croppedDistance+dy).z;
+        dy--;
+        if (dy == -3)
+        {
+          dy = 3;
+          dx--;
+        }
+      }while (isnan(point2.x));
+      poly.points.push_back(point1);
+      poly.points.push_back(point2);
+    }
     pub.publish(poly);
-
   }
 
   TyErrorId processWithLock(CAS& tcas, ResultSpecification const& res_spec)
@@ -185,14 +184,33 @@ public:
     cas.get(VIEW_CLOUD,*cloud);
 
     lineDetect2D(image);
-    //processImage(image);
     return UIMA_ERR_NONE;
   }
 
   void fillVisualizerWithLock(pcl::visualization::PCLVisualizer& visualizer,
                               const bool firstRun)
   {
-    return;
+    const std::string cloudname = "LineAnnotatorCloud";
+    double pointSize = 1;
+
+    if (firstRun)
+    {
+      visualizer.addPointCloud(cloud, cloudname);
+      visualizer.setPointCloudRenderingProperties(
+          pcl::visualization::PCL_VISUALIZER_POINT_SIZE, pointSize, cloudname);
+      visualizer.addSphere<pcl::PointXYZ>(pcl::PointXYZ(point1.x,point1.y,point1.z),0.01,"start");
+      visualizer.addSphere<pcl::PointXYZ>(pcl::PointXYZ(point2.x,point2.y,point2.z),0.01,"end");
+    }
+    else
+    {
+      visualizer.updatePointCloud(cloud, cloudname);
+      visualizer.getPointCloudRenderingProperties(
+          pcl::visualization::PCL_VISUALIZER_POINT_SIZE, pointSize, cloudname);
+      visualizer.updateSphere<pcl::PointXYZ>(pcl::PointXYZ(point1.x,point1.y,point1.z),0.01,0,0,255,"start");
+      visualizer.updateSphere<pcl::PointXYZ>(pcl::PointXYZ(point2.x,point2.y,point2.z),0.01,255,0,0,"end");
+    }
+
+
   }
   void drawImageWithLock(cv::Mat& disp) { disp = final_line; }
 };
