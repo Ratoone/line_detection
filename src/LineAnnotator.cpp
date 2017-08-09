@@ -6,6 +6,7 @@
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/io/pcd_io.h>
+#include <pcl/common/norms.h>
 #include <rs/types/all_types.h>
 // RS
 #include <rs/scene_cas.h>
@@ -37,6 +38,7 @@ private:
   ros::NodeHandle nh;
   ros::Publisher pub;
   pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud;
+  pcl::PointCloud<pcl::Normal>::Ptr cloudNormals;
   geometry_msgs::Point32 point1,point2;
 
 public:
@@ -46,6 +48,8 @@ public:
     pub = nh.advertise<geometry_msgs::Polygon>("lines2D",100);
     cloud = pcl::PointCloud<pcl::PointXYZRGBA>::Ptr(
         new pcl::PointCloud<pcl::PointXYZRGBA>);
+    cloudNormals = pcl::PointCloud<pcl::Normal>::Ptr(
+        new pcl::PointCloud<pcl::Normal>);
   }
 
   TyErrorId initialize(AnnotatorContext& ctx)
@@ -139,36 +143,63 @@ public:
       line(final_line, Point(lines[i][0], lines[i][1]), Point(lines[i][2], lines[i][3]),
            Scalar(0, 0, 255), 2, CV_AA);
 
-
-      int dx=-2,dy=-3;
+      int dx=-2,dy=-4;
       do
       {
-        point1.x = cloud->at(lines[i][0]+croppedDistance+dx,lines[i][1]+croppedDistance+dy).x;
-        point1.y = cloud->at(lines[i][0]+croppedDistance+dx,lines[i][1]+croppedDistance+dy).y;
-        point1.z = cloud->at(lines[i][0]+croppedDistance+dx,lines[i][1]+croppedDistance+dy).z;
         dy++;
         if (dy == 3)
         {
           dy = -3;
           dx++;
         }
+        point1.x = cloud->at(lines[i][0]+croppedDistance+dx,lines[i][1]+croppedDistance+dy).x;
+        point1.y = cloud->at(lines[i][0]+croppedDistance+dx,lines[i][1]+croppedDistance+dy).y;
+        point1.z = cloud->at(lines[i][0]+croppedDistance+dx,lines[i][1]+croppedDistance+dy).z;
       }while (std::isnan(point1.x));
+      int point1CoordinateX = lines[i][0]+croppedDistance+dx;
+      int point1CoordinateY = lines[i][1]+croppedDistance+dy;
 
-      dx=2,dy=3;
+      dx=2,dy=4;
       do
       {
-        point2.x = cloud->at(lines[i][2]+croppedDistance+dx,lines[i][3]+croppedDistance+dy).x;
-        point2.y = cloud->at(lines[i][2]+croppedDistance+dx,lines[i][3]+croppedDistance+dy).y;
-        point2.z = cloud->at(lines[i][2]+croppedDistance+dx,lines[i][3]+croppedDistance+dy).z;
         dy--;
         if (dy == -3)
         {
           dy = 3;
           dx--;
         }
+        point2.x = cloud->at(lines[i][2]+croppedDistance+dx,lines[i][3]+croppedDistance+dy).x;
+        point2.y = cloud->at(lines[i][2]+croppedDistance+dx,lines[i][3]+croppedDistance+dy).y;
+        point2.z = cloud->at(lines[i][2]+croppedDistance+dx,lines[i][3]+croppedDistance+dy).z;
       }while (isnan(point2.x));
+      int point2CoordinateX = lines[i][2]+croppedDistance+dx;
+      int point2CoordinateY = lines[i][3]+croppedDistance+dy;
+
       poly.points.push_back(point1);
       poly.points.push_back(point2);
+
+      float normalX = 0, normalY = 0, normalZ = 0, nbOfPoints = 0;
+      //normal averaging
+      for(int x = std::min(point1CoordinateX,point2CoordinateX); x <= std::max(point1CoordinateX,point2CoordinateX); x++)
+      {
+        for(int y = std::min(point1CoordinateY,point2CoordinateY); y <= std::max(point1CoordinateY,point2CoordinateY); y++)
+        {
+          if(isnan(cloudNormals->at(x,y).normal_x))
+          {
+            continue;
+          }
+          normalX += cloudNormals->at(x,y).normal_x;
+          normalY += cloudNormals->at(x,y).normal_y;
+          normalZ += cloudNormals->at(x,y).normal_z;
+          nbOfPoints++;
+        }
+      }
+      geometry_msgs::Point32 normal;
+      normal.x = normalX/nbOfPoints;
+      normal.y = normalY/nbOfPoints;
+      normal.z = normalZ/nbOfPoints;
+      poly.points.push_back(normal);
+
     }
     pub.publish(poly);
   }
@@ -182,6 +213,7 @@ public:
 
     cas.get(VIEW_COLOR_IMAGE, image);
     cas.get(VIEW_CLOUD,*cloud);
+    cas.get(VIEW_NORMALS,*cloudNormals);
 
     lineDetect2D(image);
     return UIMA_ERR_NONE;
@@ -209,8 +241,6 @@ public:
       visualizer.updateSphere<pcl::PointXYZ>(pcl::PointXYZ(point1.x,point1.y,point1.z),0.01,0,0,255,"start");
       visualizer.updateSphere<pcl::PointXYZ>(pcl::PointXYZ(point2.x,point2.y,point2.z),0.01,255,0,0,"end");
     }
-
-
   }
   void drawImageWithLock(cv::Mat& disp) { disp = final_line; }
 };

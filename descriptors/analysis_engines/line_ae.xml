@@ -191,9 +191,10 @@
       <fixedFlow>
         <node>CollectionReader</node>
         <node>ImagePreprocessor</node>
-<!--        <node>NormalEstimator</node>-->
 <!--        <node>PointCloudDownsampler</node>-->
+
         <node>PlaneExtraction</node>
+        <node>NormalEstimator</node>
         <node>LineAnnotator</node>
         <node>LineAnnotator3D</node>
         <!--<node>ImageSegmentationAnnotator</node>
