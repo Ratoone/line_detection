@@ -22,7 +22,8 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include <math.h>
-#include <geometry_msgs/Polygon.h>
+#include <geometry_msgs/PointStamped.h>
+#include <geometry_msgs/PolygonStamped.h>
 
 #define LENGTH_THRESHOLD 0.8f
 
@@ -36,16 +37,18 @@ private:
   int croppedDistance = 20;
   Mat final_line;
   ros::NodeHandle nh;
-  ros::Publisher pub;
+  ros::Publisher pubLines, pubNormal;
   pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud;
   pcl::PointCloud<pcl::Normal>::Ptr cloudNormals;
   geometry_msgs::Point32 point1,point2;
+  rs::CameraInfo cameraInfo;
 
 public:
   LineAnnotator()
       : DrawingAnnotator(__func__), nh("~")
   {
-    pub = nh.advertise<geometry_msgs::Polygon>("lines2D",100);
+    pubLines = nh.advertise<geometry_msgs::PolygonStamped>("ShelfSegment",5);
+    pubNormal = nh.advertise<geometry_msgs::PointStamped>("ShelfNormal",5);
     cloud = pcl::PointCloud<pcl::PointXYZRGBA>::Ptr(
         new pcl::PointCloud<pcl::PointXYZRGBA>);
     cloudNormals = pcl::PointCloud<pcl::Normal>::Ptr(
@@ -85,15 +88,9 @@ public:
     Rect regionOfInterest (Point(croppedDistance,croppedDistance),Point(image.cols-croppedDistance,image.rows-croppedDistance));
     image_gray = image(regionOfInterest);
 
-    //cvtColor(image_gray,image_gray,COLOR_BGRA2BGR);
-    //adaptiveBilateralFilter(image_gray,image_filtered,Size(3,3),3.0);
     cvtColor(image_gray, image_gray, CV_BGR2GRAY);
     GaussianBlur(image_gray, image_gray, Size(5, 5), 0, 0);
-
     Canny(image_gray, edges, 120, 200, 3);
-
-    //cv::morphologyEx(edges,edges,cv::MORPH_CLOSE,Mat());
-
     dilate(edges,image,Mat(),Point(-1,-1),2);
 
     findContours(image,contours,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_SIMPLE);
@@ -131,14 +128,14 @@ public:
                     return lineDistance(l1) > lineDistance(l2);
                   });
 
-    geometry_msgs::Polygon poly;
-
     for (size_t i =  0; i < lines.size();i++)
     {
       if (i != 0 && abs(lineDistance(lines[i])-lineDistance(lines[i-1])) < 30)
       {
         continue;
       }
+
+      geometry_msgs::PolygonStamped lineMessage;
 
       line(final_line, Point(lines[i][0], lines[i][1]), Point(lines[i][2], lines[i][3]),
            Scalar(0, 0, 255), 2, CV_AA);
@@ -175,8 +172,10 @@ public:
       int point2CoordinateX = lines[i][2]+croppedDistance+dx;
       int point2CoordinateY = lines[i][3]+croppedDistance+dy;
 
-      poly.points.push_back(point1);
-      poly.points.push_back(point2);
+      lineMessage.polygon.points.push_back(point1);
+      lineMessage.polygon.points.push_back(point2);
+      lineMessage.header.stamp = (new ros::Time())->fromNSec(cameraInfo.header.get().stamp.get());
+      pubLines.publish(lineMessage);
 
       float normalX = 0, normalY = 0, normalZ = 0, nbOfPoints = 0;
       //normal averaging
@@ -194,26 +193,26 @@ public:
           nbOfPoints++;
         }
       }
-      geometry_msgs::Point32 normal;
-      normal.x = normalX/nbOfPoints;
-      normal.y = normalY/nbOfPoints;
-      normal.z = normalZ/nbOfPoints;
-      poly.points.push_back(normal);
-
+      geometry_msgs::PointStamped normal;
+      normal.point.x = normalX/nbOfPoints;
+      normal.point.y = normalY/nbOfPoints;
+      normal.point.z = normalZ/nbOfPoints;
+      pubNormal.publish(normal);
     }
-    pub.publish(poly);
   }
 
   TyErrorId processWithLock(CAS& tcas, ResultSpecification const& res_spec)
   {
     rs::SceneCas cas(tcas);
     Mat image;
+    //cameraInfo = rs::create<rs::CameraInfo>(cas);
 
     outInfo("process start");
 
     cas.get(VIEW_COLOR_IMAGE, image);
     cas.get(VIEW_CLOUD,*cloud);
     cas.get(VIEW_NORMALS,*cloudNormals);
+    cas.get(VIEW_CAMERA_INFO,cameraInfo);
 
     lineDetect2D(image);
     return UIMA_ERR_NONE;
