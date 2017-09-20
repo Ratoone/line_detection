@@ -16,7 +16,8 @@
 // ros
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
-#include <std_msgs/Float32.h>
+#include <rosbag/bag.h>
+#include <rosbag/view.h>
 
 //
 #include "opencv2/imgproc/imgproc.hpp"
@@ -26,6 +27,7 @@
 #include <geometry_msgs/PolygonStamped.h>
 
 #define LENGTH_THRESHOLD 0.8f
+#define DISTANCE_THRESHOLD 30
 
 using namespace uima;
 using namespace cv;
@@ -35,13 +37,14 @@ class LineAnnotator : public DrawingAnnotator
 {
 private:
   int croppedDistance = 20;
+  int lastMessageIndex = 0;
   Mat final_line;
   ros::NodeHandle nh;
   ros::Publisher pubLines, pubNormal;
   pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud;
   pcl::PointCloud<pcl::Normal>::Ptr cloudNormals;
   geometry_msgs::Point32 point1,point2;
-  rs::CameraInfo cameraInfo;
+  sensor_msgs::CameraInfo cameraInfo;
 
 public:
   LineAnnotator()
@@ -72,6 +75,18 @@ public:
     Point p1 (line[0],line[1]);
     Point p2 (line[2],line[3]);
     return abs(p1.x*p2.y-p1.y*p2.x)/norm(p1-p2);
+  }
+
+  static float lineDistance(geometry_msgs::PolygonStamped line)
+  {
+     geometry_msgs::Point32 p1 = line.polygon.points[0];
+     geometry_msgs::Point32 p2 = line.polygon.points[1];
+     return lineDistance(p1,p2);
+  }
+
+  static float lineDistance(geometry_msgs::Point32 p1, geometry_msgs::Point32 p2)
+  {
+    return abs(p1.x*p2.y-p1.y*p2.x)/sqrt((p1.x-p2.x)*(p1.x-p2.x)+(p1.y-p2.y)*(p1.y-p2.y));
   }
 
   static float lineLength(Vec4i line)
@@ -128,9 +143,36 @@ public:
                     return lineDistance(l1) > lineDistance(l2);
                   });
 
+    vector<geometry_msgs::PolygonStamped> lastShelves;
+    vector<geometry_msgs::PointStamped> lastNormals;
+//    if (lastMessageIndex > 0)
+//    {
+//      rosbag::Bag bag ("messages.bag",rosbag::bagmode::Read);
+//      vector<string> topics;
+//      topics.push_back("Shelf"+(lastMessageIndex-1));
+//      topics.push_back("Normal"+(lastMessageIndex-1));
+//      rosbag::View view (bag,rosbag::TopicQuery(topics));
+
+//      BOOST_FOREACH(rosbag::MessageInstance const m, view)
+//      {
+//        geometry_msgs::PolygonStampedConstPtr p = m.instantiate<geometry_msgs::PolygonStamped>();
+//        if (p!= NULL)
+//        {
+//          lastShelves.push_back(*p);
+//        }
+
+//        geometry_msgs::PointStampedConstPtr point = m.instantiate<geometry_msgs::PointStamped>();
+//        if (point!= NULL)
+//        {
+//          lastNormals.push_back(*point);
+//        }
+//      }
+//    }
+//    rosbag::Bag bag ("messages.bag",rosbag::bagmode::Write);
+
     for (size_t i =  0; i < lines.size();i++)
     {
-      if (i != 0 && abs(lineDistance(lines[i])-lineDistance(lines[i-1])) < 30)
+      if (i != 0 && abs(lineDistance(lines[i])-lineDistance(lines[i-1])) < DISTANCE_THRESHOLD)
       {
         continue;
       }
@@ -172,10 +214,27 @@ public:
       int point2CoordinateX = lines[i][2]+croppedDistance+dx;
       int point2CoordinateY = lines[i][3]+croppedDistance+dy;
 
+//      BOOST_FOREACH(geometry_msgs::PolygonStamped const poly, lastShelves)
+//      {
+//        if (abs(lineDistance(poly)-lineDistance(point1,point2))<0.2)//same line
+//        {
+//          if (poly.polygon.points[0].x<point1.x)
+//          {
+//            point1 = poly.polygon.points[0];
+//          }
+//          if (poly.polygon.points[1].x>point2.x)
+//          {
+//            point2 = poly.polygon.points[1];
+//          }
+//        }
+//      }
+
       lineMessage.polygon.points.push_back(point1);
       lineMessage.polygon.points.push_back(point2);
-      lineMessage.header.stamp = (new ros::Time())->fromNSec(cameraInfo.header.get().stamp.get());
+      lineMessage.header.stamp = cameraInfo.header.stamp;
       pubLines.publish(lineMessage);
+
+//      bag.write("Shelf"+lastMessageIndex,lineMessage.header.stamp,lineMessage);
 
       float normalX = 0, normalY = 0, normalZ = 0, nbOfPoints = 0;
       //normal averaging
@@ -193,19 +252,23 @@ public:
           nbOfPoints++;
         }
       }
+
       geometry_msgs::PointStamped normal;
       normal.point.x = normalX/nbOfPoints;
       normal.point.y = normalY/nbOfPoints;
       normal.point.z = normalZ/nbOfPoints;
+      normal.header.stamp = cameraInfo.header.stamp;
       pubNormal.publish(normal);
+//      bag.write("Normal"+lastMessageIndex,normal.header.stamp,normal);
     }
+//    bag.close();
+    lastMessageIndex++;
   }
 
   TyErrorId processWithLock(CAS& tcas, ResultSpecification const& res_spec)
   {
     rs::SceneCas cas(tcas);
     Mat image;
-    //cameraInfo = rs::create<rs::CameraInfo>(cas);
 
     outInfo("process start");
 
